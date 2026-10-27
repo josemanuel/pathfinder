@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visualizador de Algoritmos de Búsqueda</title>
+<script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 [font-family:Inter,system-ui,sans-serif] antialiased select-none">
+
+  <!-- ===== CABECERA ===== -->
+  <header class="max-w-6xl mx-auto px-5 pt-10 pb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-3 h-3 rounded-full bg-gradient-to-br from-indigo-400 to-cyan-400 shadow-[0_0_14px_rgba(99,102,241,0.8)]"></div>
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight">Visualizador de Búsqueda de Caminos</h1>
+        <p class="text-sm text-slate-400 mt-0.5">BFS · Dijkstra · A* — dibuja muros y arrastra los puntos de inicio y meta</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-5 pb-12 space-y-6">
+
+    <!-- ===== BARRA DE CONTROLES ===== -->
+    <section class="rounded-3xl border border-slate-800 bg-slate-900/50 backdrop-blur p-4 space-y-4 shadow-xl">
+
+      <!-- Fila 1: algoritmos -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-widest text-slate-500 mr-2">Algoritmos</span>
+
+        <button id="btnBfs" onclick="startAlgorithm('bfs')" class="algo-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-slate-800/70 hover:bg-slate-700 border border-slate-700 text-slate-100 transition-colors">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/layers.svg" class="w-4 h-4 invert opacity-80"> BFS
+        </button>
+        <button id="btnDijkstra" onclick="startAlgorithm('dijkstra')" class="algo-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-slate-800/70 hover:bg-slate-700 border border-slate-700 text-slate-100 transition-colors">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/route.svg" class="w-4 h-4 invert opacity-80"> Dijkstra
+        </button>
+        <button id="btnAstar" onclick="startAlgorithm('astar')" class="algo-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-slate-800/70 hover:bg-slate-700 border border-slate-700 text-slate-100 transition-colors">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/zap.svg" class="w-4 h-4 invert opacity-80"> A*
+        </button>
+        <button onclick="compareAll()" class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/40 text-indigo-300 transition-colors">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/repeat-2.svg" class="w-4 h-4 invert opacity-80"> Comparar los 3
+        </button>
+
+        <div class="flex-1"></div>
+
+        <button id="btnStop" onclick="stopAll()" class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 transition-colors">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/square.svg" class="w-4 h-4 invert opacity-80"> Detener
+        </button>
+      </div>
+
+      <!-- Fila 2: herramientas / velocidad / tamaño / acciones -->
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-slate-800 pt-4">
+
+        <!-- Herramienta -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Herramienta</span>
+          <div class="inline-flex rounded-xl overflow-hidden border border-slate-700">
+            <button id="toolWall" onclick="setTool('wall')" class="px-3 py-1.5 text-sm font-semibold bg-indigo-500 text-white transition-colors">
+              <img src="https://unpkg.com/lucide-static@1.44.0/icons/pen-tool.svg" class="w-4 h-4 inline -mt-0.5 mr-1"> Muro
+            </button>
+            <button id="toolErase" onclick="setTool('erase')" class="px-3 py-1.5 text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">
+              <img src="https://unpkg.com/lucide-static@1.44.0/icons/eraser.svg" class="w-4 h-4 inline -mt-0.5 mr-1"> Borrador
+            </button>
+          </div>
+        </div>
+
+        <!-- Velocidad -->
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Velocidad</span>
+          <input id="speedRange" type="range" min="1" max="120" value="40"
+                 class="w-36 accent-indigo-400 cursor-pointer">
+          <span id="speedLabel" class="text-sm font-semibold text-slate-300 w-8">40</span>
+        </div>
+
+        <!-- Tamaño -->
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold uppercase tracking-widest text-slate-500">Tamaño</span>
+          <select id="sizeSelect" onchange="changeSize(this.value)"
+                  class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-200 outline-none focus:border-indigo-500 transition-colors">
+            <option value="small">Pequeño (25×15)</option>
+            <option value="medium" selected>Mediano (40×24)</option>
+            <option value="large">Grande (60×36)</option>
+          </select>
+        </div>
+
+        <div class="flex-1"></div>
+
+        <!-- Acciones -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="randomMaze()" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold bg-slate-800/70 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors">
+            <img src="https://unpkg.com/lucide-static@1.44.0/icons/shuffle.svg" class="w-3.5 h-3.5 invert opacity-80"> Laberinto aleatorio
+          </button>
+          <button onclick="clearWalls()" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold bg-slate-800/70 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors">
+            <img src="https://unpkg.com/lucide-static@1.44.0/icons/eraser.svg" class="w-3.5 h-3.5 invert opacity-80"> Limpiar muros
+          </button>
+          <button onclick="clearPath()" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold bg-slate-800/70 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors">
+            <img src="https://unpkg.com/lucide-static@1.44.0/icons/trash-2.svg" class="w-3.5 h-3.5 invert opacity-80"> Limpiar ruta
+          </button>
+          <button onclick="resetAll()" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold bg-slate-800/70 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-colors">
+            <img src="https://unpkg.com/lucide-static@1.44.0/icons/refresh-cw.svg" class="w-3.5 h-3.5 invert opacity-80"> Reiniciar
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== CUADRÍCULA + LEYENDA ===== -->
+    <section class="rounded-3xl border border-slate-800 bg-slate-900/40 p-3 shadow-2xl">
+      <canvas id="grid" width="860" height="540" class="w-full h-auto rounded-2xl cursor-crosshair touch-none"></canvas>
+
+      <!-- Leyenda -->
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3 px-2 pb-1 text-xs text-slate-300">
+        <span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-emerald-400"></span> Inicio</span>
+        <span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full bg-rose-400"></span> Meta</span>
+        <span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 rounded bg-slate-500"></span> Muro</span>
+        <span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 rounded bg-indigo-500/60"></span> Visitados</span>
+        <span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 rounded bg-cyan-400/60"></span> Frontera</span>
+        <span class="inline-flex items-center gap-2"><span class="w-3.5 h-3.5 rounded bg-amber-400"></span> Camino</span>
+        <span class="ml-auto text-slate-500 hidden sm:inline">Botón izquierdo: dibuja · Botón derecho: borra · Arrastra los puntos</span>
+      </div>
+    </section>
+
+    <!-- ===== TARJETAS DE RESULTADOS ===== -->
+    <section class="grid md:grid-cols-3 gap-4">
+
+      <!-- BFS -->
+      <article class="rounded-3xl border border-slate-800 bg-slate-900/50 p-5 shadow-xl">
+        <div class="flex items-center gap-2">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/layers.svg" class="w-5 h-5 invert opacity-80">
+          <h2 class="font-extrabold text-lg">BFS</h2>
+          <span id="bfsStatus" class="ml-auto text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">En espera</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">Amplitud · cola FIFO</p>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+          <div><p class="text-xs uppercase tracking-wider text-slate-500">Nodos visitados</p><p id="bfsVisited" class="text-3xl font-extrabold mt-1 text-slate-100">–</p></div>
+          <div><p class="text-xs uppercase tracking-wider text-slate-500">Longitud camino</p><p id="bfsLen" class="text-3xl font-extrabold mt-1 text-amber-400">–</p></div>
+        </div>
+        <p id="bfsTime" class="text-xs text-slate-500 mt-3">Tiempo: —</p>
+      </article>
+
+      <!-- Dijkstra -->
+      <article class="rounded-3xl border border-slate-800 bg-slate-900/50 p-5 shadow-xl">
+        <div class="flex items-center gap-2">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/route.svg" class="w-5 h-5 invert opacity-80">
+          <h2 class="font-extrabold text-lg">Dijkstra</h2>
+          <span id="dijkstraStatus" class="ml-auto text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">En espera</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">Coste uniforme · cola de prioridad</p>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+          <div><p class="text-xs uppercase tracking-wider text-slate-500">Nodos visitados</p><p id="dijkstraVisited" class="text-3xl font-extrabold mt-1 text-slate-100">–</p></div>
+          <div><p class="text-xs uppercase tracking-wider text-slate-500">Longitud camino</p><p id="dijkstraLen" class="text-3xl font-extrabold mt-1 text-amber-400">–</p></div>
+        </div>
+        <p id="dijkstraTime" class="text-xs text-slate-500 mt-3">Tiempo: —</p>
+      </article>
+
+      <!-- A* -->
+      <article class="rounded-3xl border border-slate-800 bg-slate-900/50 p-5 shadow-xl">
+        <div class="flex items-center gap-2">
+          <img src="https://unpkg.com/lucide-static@1.44.0/icons/zap.svg" class="w-5 h-5 invert opacity-80">
+          <h2 class="font-extrabold text-lg">A*</h2>
+          <span id="astarStatus" class="ml-auto text-xs font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">En espera</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">Heurística Manhattan · g + h</p>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+          <div><p class="text-xs uppercase tracking-wider text-slate-500">Nodos visitados</p><p id="astarVisited" class="text-3xl font-extrabold mt-1 text-slate-100">–</p></div>
+          <div><p class="text-xs uppercase tracking-wider text-slate-500">Longitud camino</p><p id="astarLen" class="text-3xl font-extrabold mt-1 text-amber-400">–</p></div>
+        </div>
+        <p id="astarTime" class="text-xs text-slate-500 mt-3">Tiempo: —</p>
+      </article>
+    </section>
+  </main>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN Y ESTADO GLOBAL
+   ============================================================ */
+const SIZE_PRESETS = {
+  small:  { cols: 25, rows: 15 },
+  medium: { cols: 40, rows: 24 },
+  large:  { cols: 60, rows: 36 }
+};
+
+let cfg = { ...SIZE_PRESETS.medium };   // tamaño actual
+let walls;          // Uint8Array: 1 = muro
+let startIdx, endIdx;
+
+let cellPx = 0, offX = 0, offY = 0;       // geometría de dibujo
+let tool = 'wall';                        // 'wall' | 'erase'
+let speed = 40;                           // pasos por frame
+let hoverCell = null;                     // celda bajo el cursor
+let drag = null;                          // arrastre en curso
+let rafId = null;
+
+const state = { running: false, chain: false, cancelled: false };
+let currentSearch = null;                 // búsqueda activa (para dibujar)
+let chainNext = null;                     // siguiente algoritmo en "comparar"
+
+const canvas = document.getElementById('grid');
+const ctx = canvas.getContext('2d');
+
+const C = {
+  bg:      '#0b1120',
+  cell:    '#14203a',
+  wall:    '#64748b',
+  wallEdge:'#7c8ba1',
+  visited: 'rgba(99,102,241,0.42)',
+  frontier:'rgba(34,211,238,0.38)',
+  path:    '#fbbf24',
+  start:   '#34d399',
+  end:     '#fb7185',
+  hover:   'rgba(255,255,255,0.22)'
+};
+
+/* Resultados por algoritmo: visited = nodos expandidos, len = celdas del camino */
+const results = {
+  bfs:      { visited: null, len: null, time: null, found: null },
+  dijkstra: { visited: null, len: null, time: null, found: null },
+  astar:    { visited: null, len: null, time: null, found: null }
+};
+
+/* ============================================================
+   UTILIDADES DE CUADRÍCULA
+   ============================================================ */
+function cellAt(r, c) { return r * cfg.cols + c; }
+function idxToRC(i)    { return { r: Math.floor(i / cfg.cols), c: i % cfg.cols }; }
+
+function neighbors(idx) {
+  const { r, c } = idxToRC(idx);
+  const nb = [];
+  if (r > 0)          nb.push(idx - cfg.cols);
+  if (r < cfg.rows - 1) nb.push(idx + cfg.cols);
+  if (c > 0)          nb.push(idx - 1);
+  if (c < cfg.cols - 1) nb.push(idx + 1);
+  return nb;
+}
+
+function computeGeometry() {
+  const W = canvas.width, H = canvas.height;
+  cellPx = Math.min(Math.floor(W / cfg.cols), Math.floor(H / cfg.rows));
+  offX = Math.floor((W - cellPx * cfg.cols) / 2);
+  offY = Math.floor((H - cellPx * cfg.rows) / 2);
+}
+
+function initGrid() {
+  const n = cfg.cols * cfg.rows;
+  walls = new Uint8Array(n);
+  startIdx = cellAt(1, 1);
+  endIdx   = cellAt(cfg.rows - 2, cfg.cols - 2);
+  computeGeometry();
+  resetResults();
+  currentSearch = null;
+  render();
+}
+
+/* ============================================================
+   RESULTADOS / UI
+   ============================================================ */
+function resetResults() {
+  for (const k in results) {
+    results[k] = { visited: null, len: null, time: null, found: null };
+  }
+  ['bfs','dijkstra','astar'].forEach(a => {
+    document.getElementById(a + 'Visited').textContent = '–';
+    document.getElementById(a + 'Len').textContent = '–';
+    document.getElementById(a + 'Time').textContent = 'Tiempo: —';
+    setStatus(a, 'idle');
+  });
+}
+
+function setStatus(algo, status) {
+  const el = document.getElementById(algo + 'Status');
+  const map = {
+    idle:  ['En espera', 'bg-slate-800 text-slate-400'],
+    running:['Ejecutando…', 'bg-indigo-500/20 text-indigo-300 animate-pulse'],
+    done:  ['Completado', 'bg-emerald-500/20 text-emerald-300'],
+    nopath:['Sin ruta', 'bg-rose-500/20 text-rose-300'],
+    stop:  ['Detenido', 'bg-amber-500/20 text-amber-300']
+  };
+  const [txt, cls] = map[status];
+  el.textContent = txt;
+  el.className = 'ml-auto text-xs font-bold px-2.5 py-1 rounded-full ' + cls;
+}
+
+function updateStatsUI(algo) {
+  const d = results[algo];
+  document.getElementById(algo + 'Visited').textContent =
+    d.visited == null ? '–' : d.visited.toLocaleString('es-ES');
+  document.getElementById(algo + 'Len').textContent =
+    d.len == null ? '–' : d.len.toLocaleString('es-ES');
+  document.getElementById(algo + 'Time').textContent =
+    d.time == null ? 'Tiempo: —' : 'Tiempo: ' + d.time.toFixed(1) + ' ms';
+}
+
+/* ============================================================
+   ALGORITMOS: BFS / DIJKSTRA / A*
+   Cada búsqueda expone step() + done + found + path + visited + frontierSet
+   ============================================================ */
+class MinHeap {
+  constructor() { this.a = []; }
+  get size() { return this.a.length; }
+  push(item) {
+    const a = this.a; a.push(item);
+    let i = a.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (a[p].f < a[i].f || (a[p].f === a[i].f && a[p].g <= a[i].g)) break;
+      [a[p], a[i]] = [a[i], a[p]];
+      i = p;
+    }
+  }
+  pop() {
+    const a = this.a, top = a[0], last = a.pop();
+    if (a.length) {
+      a[0] = last;
+      let i = 0;
+      while (true) {
+        let l = 2*i+1, r = l+1, s = i;
+        if (l < a.length && (a[l].f < a[s].f || (a[l].f === a[s].f && a[l].g < a[s].g))) s = l;
+        if (r < a.length && (a[r].f < a[s].f || (a[r].f === a[s].f && a[r].g < a[s].g))) s = r;
+        if (s === i) break;
+        [a[i], a[s]] = [a[s], a[i]];
+        i = s;
+      }
+    }
+    return top;
+  }
+}
+
+function reconstructPath(parent) {
+  const path = [];
+  let cur = endIdx;
+  while (cur !== -1) { path.push(cur); cur = parent[cur]; }
+  path.reverse();
+  return path;
+}
+
+function manhattan(idx) {
+  const e = idxToRC(endIdx);
+  const n = idxToRC(idx);
+  return Math.abs(n.r - e.r) + Math.abs(n.c - e.c);
+}
+
+function createSearch(type) {
+  const n = cfg.cols * cfg.rows;
+  const s = {
+    type,
+    visited: new Uint8Array(n),
+    parent: new Int32Array(n).fill(-1),
+    dist: new Float32Array(n).fill(Infinity),
+    frontierSet: new Set(),
+    explored: 0,
+    done: false,
+    found: false,
+    path: null,
+    finish(ok) {
+      this.done = true; this.found = ok;
+      if (ok) this.path = reconstructPath(this.parent);
+    }
+  };
+
+  if (type === 'bfs') {
+    // BFS: cola FIFO, marcamos al encolar para no duplicar
+    s.queue = [startIdx];
+    s.ptr = 0;
+    s.enq = new Uint8Array(n);
+    s.enq[startIdx] = 1;
+    s.dist[startIdx] = 0;
+    s.frontierSet.add(startIdx);
+
+    s.step = function () {
+      if (this.ptr >= this.queue.length) { this.finish(false); return; }
+      const cur = this.queue[this.ptr++];
+      this.frontierSet.delete(cur);
+      this.visited[cur] = 1;
+      this.explored++;
+      if (cur === endIdx) { this.finish(true); return; }
+      for (const nb of neighbors(cur)) {
+        if (walls[nb] || this.enq[nb]) continue;
+        this.enq[nb] = 1;
+        this.parent[nb] = cur;
+        this.dist[nb] = this.dist[cur] + 1;
+        this.queue.push(nb);
+        this.frontierSet.add(nb);
+      }
+    };
+  } else {
+    // Dijkstra y A*: cola de prioridad. Dijkstra usa f = g; A* usa f = g + h.
+    const heap = new MinHeap();
+    s.heap = heap;
+    s.dist[startIdx] = 0;
+    const h = type === 'astar' ? manhattan : () => 0;
+    heap.push({ f: h(startIdx), g: 0, idx: startIdx });
+    s.frontierSet.add(startIdx);
+
+    s.step = function () {
+      let item = null;
+      while (this.heap.size) {
+        const cand = this.heap.pop();
+        if (cand.g <= this.dist[cand.idx]) { item = cand; break; } // entrada obsoleta
+      }
+      if (!item) { this.finish(false); return; }
+      this.frontierSet.delete(item.idx);
+      this.visited[item.idx] = 1;
+      this.explored++;
+      if (item.idx === endIdx) { this.finish(true); return; }
+      for (const nb of neighbors(item.idx)) {
+        if (walls[nb]) continue;
+        const ng = item.g + 1;
+        if (ng < this.dist[nb]) {
+          this.dist[nb] = ng;
+          this.parent[nb] = item.idx;
+          this.heap.push({ f: ng + h(nb), g: ng, idx: nb });
+          this.frontierSet.add(nb);
+        }
+      }
+    };
+  }
+  return s;
+}
+
+/* ============================================================
+   ANIMACIÓN
+   ============================================================ */
+function tick() {
+  if (!state.running) return;
+  let steps = speed;
+  while (steps-- > 0 && state.running && !currentSearch.done) {
+    currentSearch.step();
+  }
+  render();
+  if (currentSearch.done) {
+    finalizeRun();
+    if (state.chain && chainNext) {
+      const next = chainNext;
+      chainNext = null;
+      startRun(next);
+    } else {
+      state.chain = false;
+    }
+  } else {
+    rafId = requestAnimationFrame(tick);
+  }
+}
+
+function finalizeRun() {
+  const s = currentSearch;
+  const t = results[s.type];
+  t.found = s.found;
+  t.visited = s.explored;
+  if (s.found) t.len = s.path.length;  // celdas incluyendo inicio y meta
+  t.time = s.elapsed;
+  setStatus(s.type, s.found ? 'done' : 'nopath');
+  updateStatsUI(s.type);
+  currentSearch = s; // conservar para dibujar el resultado final
+  state.running = false;
+}
+
+function startRun(type) {
+  // Detener cualquier animación previa
+  stopAnimation();
+  const s = createSearch(type);
+  s.elapsed = performance.now();
+  currentSearch = s;
+  state.running = true;
+  setStatus(type, 'running');
+  render();
+  rafId = requestAnimationFrame(tick);
+}
+
+function startAlgorithm(type) {
+  state.chain = false; chainNext = null;
+  startRun(type);
+}
+
+function compareAll() {
+  stopAnimation();
+  resetResults();
+  currentSearch = null;
+  state.chain = true;
+  state.cancelled = false;
+  chainNext = 'dijkstra';
+  startRun('bfs');
+}
+
+function stopAll() {
+  state.chain = false; chainNext = null;
+  stopAnimation();
+  if (currentSearch && !currentSearch.done) {
+    setStatus(currentSearch.type, 'stop');
+  }
+  currentSearch = null;
+  render();
+}
+
+function stopAnimation() {
+  state.running = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+}
+
+/* ============================================================
+   DIBUJO
+   ============================================================ */
+function rr(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function render() {
+  const W = canvas.width, H = canvas.height;
+  // Fondo
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = 1; // separación entre celdas
+  const s = cellPx;
+
+  for (let i = 0; i < walls.length; i++) {
+    const { r, c } = idxToRC(i);
+    const x = offX + c * s, y = offY + r * s;
+    let fill = C.cell;
+    if (walls[i]) fill = C.wall;
+
+    ctx.fillStyle = fill;
+    rr(x + pad, y + pad, s - pad * 2, s - pad * 2, 3);
+    ctx.fill();
+
+    // Borde sutil en muros
+    if (walls[i]) {
+      ctx.strokeStyle = C.wallEdge;
+      ctx.lineWidth = 0.6;
+      rr(x + pad, y + pad, s - pad * 2, s - pad * 2, 3);
+      ctx.stroke();
+    }
+  }
+
+  // Color de búsqueda activa (visitados / frontera)
+  if (currentSearch && !currentSearch.done) {
+    for (const i of currentSearch.frontierSet) {
+      const { r, c } = idxToRC(i);
+      const x = offX + c * s, y = offY + r * s;
+      ctx.fillStyle = C.frontier;
+      rr(x + pad, y + pad, s - pad * 2, s - pad * 2, 3);
+      ctx.fill();
+    }
+    for (let i = 0; i < walls.length; i++) {
+      if (!currentSearch.visited[i]) continue;
+      const { r, c } = idxToRC(i);
+      const x = offX + c * s, y = offY + r * s;
+      ctx.fillStyle = C.visited;
+      rr(x + pad, y + pad, s - pad * 2, s - pad * 2, 3);
+      ctx.fill();
+    }
+  }
+
+  // Resaltado de celda bajo el cursor
+  if (hoverCell !== null && !state.running && !walls[hoverCell]) {
+    const { r, c } = idxToRC(hoverCell);
+    const x = offX + c * s, y = offY + r * s;
+    ctx.fillStyle = C.hover;
+    rr(x + pad, y + pad, s - pad * 2, s - pad * 2, 3);
+    ctx.fill();
+  }
+
+  // Camino final (si existe)
+  if (currentSearch && currentSearch.path && currentSearch.done && currentSearch.found) {
+    const path = currentSearch.path;
+    ctx.beginPath();
+    for (let i = 0; i < path.length; i++) {
+      const { r, c } = idxToRC(path[i]);
+      const cx = offX + c * s + s / 2, cy = offY + r * s + s / 2;
+      if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+    }
+    ctx.strokeStyle = C.path;
+    ctx.lineWidth = Math.max(3, s * 0.35);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Trazo interior más claro para legibilidad
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = Math.max(1, s * 0.12);
+    ctx.stroke();
+  }
+
+  // Puntos de inicio y meta
+  drawEndpoint(startIdx, C.start);
+  drawEndpoint(endIdx, C.end);
+}
+
+function drawEndpoint(idx, color) {
+  const s = cellPx;
+  const { r, c } = idxToRC(idx);
+  const cx = offX + c * s + s / 2, cy = offY + r * s + s / 2;
+  const rad = Math.max(4, s * 0.32);
+  ctx.beginPath();
+  ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+/* ============================================================
+   INTERACCIÓN CON EL RATÓN
+   ============================================================ */
+function getCell(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const c = Math.floor((x - offX) / cellPx);
+  const r = Math.floor((y - offY) / cellPx);
+  if (r < 0 || c < 0 || r >= cfg.rows || c >= cfg.cols) return null;
+  return cellAt(r, c);
+}
+
+function invalidateResults() {
+  // Cualquier edición de la cuadrícula invalida los resultados previos
+  stopAnimation();
+  currentSearch = null;
+  resetResults();
+  render();
+}
+
+function setWall(idx, val) {
+  if (idx === startIdx || idx === endIdx) return;
+  if (walls[idx] === (val ? 1 : 0)) return;
+  walls[idx] = val ? 1 : 0;
+  invalidateResults();
+}
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('pointerdown', e => {
+  if (state.running) return;
+  e.preventDefault();
+  const cell = getCell(e);
+  if (cell === null) return;
+  canvas.setPointerCapture(e.pointerId);
+
+  if (cell === startIdx) drag = { type: 'start' };
+  else if (cell === endIdx) drag = { type: 'end' };
+  else if (e.button === 2) { drag = { type: 'erase' }; setWall(cell, false); }
+  else if (tool === 'wall') { drag = { type: 'wall' }; setWall(cell, true); }
+  else { drag = { type: 'erase' }; setWall(cell, false); }
+});
+
+canvas.addEventListener('pointermove', e => {
+  const cell = getCell(e);
+  if (!drag) {
+    hoverCell = cell;
+    render();
+    return;
+  }
+  if (cell === null) return;
+  e.preventDefault();
+
+  if (drag.type === 'start' || drag.type === 'end') {
+    // Arrastrar inicio/meta
+    if (cell === startIdx || cell === endIdx || walls[cell]) return;
+    if (drag.type === 'start') {
+      if (cell === endIdx) { startIdx = endIdx; endIdx = cell; }
+      else startIdx = cell;
+    } else {
+      if (cell === startIdx) { endIdx = startIdx; startIdx = cell; }
+      else endIdx = cell;
+    }
+    invalidateResults();
+  } else {
+    const val = drag.type === 'wall';
+    setWall(cell, val);
+  }
+});
+
+canvas.addEventListener('pointerup', () => { drag = null; });
+canvas.addEventListener('pointerleave', () => { if (!drag) hoverCell = null; });
+
+/* ============================================================
+   CONTROLES
+   ============================================================ */
+function setTool(t) {
+  tool = t;
+  const w = document.getElementById('toolWall');
+  const e = document.getElementById('toolErase');
+  if (t === 'wall') {
+    w.className = 'px-3 py-1.5 text-sm font-semibold bg-indigo-500 text-white transition-colors';
+    e.className = 'px-3 py-1.5 text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors';
+  } else {
+    e.className = 'px-3 py-1.5 text-sm font-semibold bg-indigo-500 text-white transition-colors';
+    w.className = 'px-3 py-1.5 text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors';
+  }
+}
+
+document.getElementById('speedRange').addEventListener('input', e => {
+  speed = +e.target.value;
+  document.getElementById('speedLabel').textContent = speed;
+});
+
+function changeSize(key) {
+  cfg = { ...SIZE_PRESETS[key] };
+  initGrid();
+}
+
+function randomMaze() {
+  stopAnimation();
+  currentSearch = null;
+  for (let i = 0; i < walls.length; i++) {
+    if (i === startIdx || i === endIdx) { walls[i] = 0; continue; }
+    // Limpiar vecinos inmediatos de inicio/meta
+    const { r, c } = idxToRC(i);
+    const isNearStart = Math.abs(r - 1) <= 1 && Math.abs(c - 1) <= 1;
+    const e = idxToRC(endIdx);
+    const isNearEnd = Math.abs(r - e.r) <= 1 && Math.abs(c - e.c) <= 1;
+    walls[i] = (isNearStart || isNearEnd) ? 0 : (Math.random() < 0.3 ? 1 : 0);
+  }
+  invalidateResults();
+}
+
+function clearWalls() {
+  stopAnimation();
+  walls.fill(0);
+  currentSearch = null;
+  resetResults();
+  render();
+}
+
+function clearPath() {
+  stopAnimation();
+  currentSearch = null;
+  resetResults();
+  render();
+}
+
+function resetAll() {
+  initGrid();
+}
+
+/* ============================================================
+   ARRANQUE
+   ============================================================ */
+initGrid();
+</script>
+</body>
+</html>
